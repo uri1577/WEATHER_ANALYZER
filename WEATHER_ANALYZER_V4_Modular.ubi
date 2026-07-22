@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sixx.object sixx.id="0" sixx.type="BlocksLibraryElement" sixx.env="Arduino" >
+	<sixx.object sixx.id="1" sixx.name="typeClass" sixx.type="CodeUserBlock" sixx.env="Arduino" >
+		<sixx.object sixx.id="2" sixx.name="blocks" sixx.type="OrderedCollection" sixx.env="Core" ></sixx.object>
+		<sixx.object sixx.id="3" sixx.name="label" sixx.type="String" sixx.env="Core" >WEATHER_ANALYZER_V4</sixx.object>
+		<sixx.object sixx.id="4" sixx.name="inputs" sixx.type="OrderedCollection" sixx.env="Core" >
+			<!-- W4_EN: Enable block -->
+			<sixx.object sixx.id="5" sixx.type="InputsOutputsAdaptorForUserBlock" sixx.env="Arduino" >
+				<sixx.object sixx.id="6" sixx.name="object" sixx.type="UniversalBlockInputOutput" sixx.env="Arduino" >
+					<sixx.object sixx.id="7" sixx.name="block" sixx.type="CodeUserBlock" sixx.env="Arduino" >
+						<sixx.object sixx.id="8" sixx.name="blocks" sixx.type="OrderedCollection" sixx.env="Core" ></sixx.object>
+						<sixx.object sixx.name="label" sixx.idref="3" />
+						<sixx.object sixx.id="9" sixx.name="inputs" sixx.type="OrderedCollection" sixx.env="Core" >
+							<sixx.object sixx.id="10" sixx.type="InputsOutputsAdaptorForUserBlock" sixx.env="Arduino" >
+								<sixx.object sixx.id="11" sixx.name="object" sixx.type="UniversalBlockInputOutput" sixx.env="Arduino" >
+									<sixx.object sixx.name="block" sixx.idref="7" />
+									<sixx.object sixx.id="12" sixx.name="type" sixx.type="BooleanDataType" sixx.env="Arduino" ></sixx.object>
+									<sixx.object sixx.name="isInput" sixx.type="True" sixx.env="Core" />
+									<sixx.object sixx.id="13" sixx.name="name" sixx.type="String" sixx.env="Core" >W4_EN</sixx.object>
+									<sixx.object sixx.name="isNot" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="14" sixx.name="id" sixx.type="String" sixx.env="Core" >60f6b7d2-5c92-41a0-a2d6-16fd96cd110c</sixx.object>
+								</sixx.object>
+								<sixx.object sixx.id="15" sixx.name="comment" sixx.type="String" sixx.env="Core" >Enable block</sixx.object>
+								<sixx.object sixx.id="16" sixx.name="id" sixx.type="String" sixx.env="Core" >4cc7e161-4999-4b84-830a-4035d4fbda78</sixx.object>
+							</sixx.object>
+							<!-- W4_LAT: Latitude -->
+							<sixx.object sixx.id="17" sixx.type="InputsOutputsAdaptorForUserBlock" sixx.env="Arduino" >
+								<sixx.object sixx.id="18" sixx.name="object" sixx.type="UniversalBlockInputOutput" sixx.env="Arduino" >
+									<sixx.object sixx.name="block" sixx.idref="7" />
+									<sixx.object sixx.id="19" sixx.name="type" sixx.type="FloatDataType" sixx.env="Arduino" ></sixx.object>
+									<sixx.object sixx.name="isInput" sixx.type="True" sixx.env="Core" />
+									<sixx.object sixx.id="20" sixx.name="name" sixx.type="String" sixx.env="Core" >W4_LAT</sixx.object>
+									<sixx.object sixx.name="isNot" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="21" sixx.name="id" sixx.type="String" sixx.env="Core" >7bced50f-51cd-4173-b5f9-0bd804795b3c</sixx.object>
+								</sixx.object>
+								<sixx.object sixx.id="22" sixx.name="comment" sixx.type="String" sixx.env="Core" >Open-Meteo latitude</sixx.object>
+								<sixx.object sixx.id="23" sixx.name="id" sixx.type="String" sixx.env="Core" >a2115d58-fe41-4d6b-a8be-896b221d82df</sixx.object>
+							</sixx.object>
+							<!-- W4_LON: Longitude -->
+							<sixx.object sixx.id="24" sixx.type="InputsOutputsAdaptorForUserBlock" sixx.env="Arduino" >
+								<sixx.object sixx.id="25" sixx.name="object" sixx.type="UniversalBlockInputOutput" sixx.env="Arduino" >
+									<sixx.object sixx.name="block" sixx.idref="7" />
+									<sixx.object sixx.name="type" sixx.idref="19" />
+									<sixx.object sixx.name="isInput" sixx.type="True" sixx.env="Core" />
+									<sixx.object sixx.id="26" sixx.name="name" sixx.type="String" sixx.env="Core" >W4_LON</sixx.object>
+									<sixx.object sixx.name="isNot" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="27" sixx.name="id" sixx.type="String" sixx.env="Core" >2a871366-304d-495c-ab1b-91e1e0f4b979</sixx.object>
+								</sixx.object>
+								<sixx.object sixx.id="28" sixx.name="comment" sixx.type="String" sixx.env="Core" >Open-Meteo longitude</sixx.object>
+								<sixx.object sixx.id="29" sixx.name="id" sixx.type="String" sixx.env="Core" >43259f3d-478e-4bdb-a8c0-44f6caa33c3d</sixx.object>
+							</sixx.object>
+							<!-- W4_TEMP_C: Temperature Celsius -->
+							<sixx.object sixx.id="30" sixx.type="InputsOutputsAdaptorForUserBlock" sixx.env="Arduino" >
+								<sixx.object sixx.id="31" sixx.name="object" sixx.type="UniversalBlockInputOutput" sixx.env="Arduino" >
+									<sixx.object sixx.name="block" sixx.idref="7" />
+									<sixx.object sixx.name="type" sixx.idref="19" />
+									<sixx.object sixx.name="isInput" sixx.type="True" sixx.env="Core" />
+									<sixx.object sixx.id="32" sixx.name="name" sixx.type="String" sixx.env="Core" >W4_TEMP_C</sixx.object>
+									<sixx.object sixx.name="isNot" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="33" sixx.name="id" sixx.type="String" sixx.env="Core" >c54fb01c-aeb3-4188-a740-35aa3699eecf</sixx.object>
+								</sixx.object>
+								<sixx.object sixx.id="34" sixx.name="comment" sixx.type="String" sixx.env="Core" >Sensor temperature Celsius (BME280/DHT)</sixx.object>
+								<sixx.object sixx.id="35" sixx.name="id" sixx.type="String" sixx.env="Core" >d88e9f34-903a-4997-97e3-c72dd6982ebe</sixx.object>
+							</sixx.object>
+							<!-- W4_HUM_PCT: Humidity Percent -->
+							<sixx.object sixx.id="36" sixx.type="InputsOutputsAdaptorForUserBlock" sixx.env="Arduino" >
+								<sixx.object sixx.id="37" sixx.name="object" sixx.type="UniversalBlockInputOutput" sixx.env="Arduino" >
+									<sixx.object sixx.name="block" sixx.idref="7" />
+									<sixx.object sixx.name="type" sixx.idref="19" />
+									<sixx.object sixx.name="isInput" sixx.type="True" sixx.env="Core" />
+									<sixx.object sixx.id="38" sixx.name="name" sixx.type="String" sixx.env="Core" >W4_HUM_PCT</sixx.object>
+									<sixx.object sixx.name="isNot" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="39" sixx.name="id" sixx.type="String" sixx.env="Core" >1d956d0c-75cb-49a6-b5d8-e715bfa99498</sixx.object>
+								</sixx.object>
+								<sixx.object sixx.id="40" sixx.name="comment" sixx.type="String" sixx.env="Core" >Sensor humidity percent (BME280/DHT)</sixx.object>
+								<sixx.object sixx.id="41" sixx.name="id" sixx.type="String" sixx.env="Core" >34acc2e5-e3d9-47e5-80de-acd83eb7db9c</sixx.object>
+							</sixx.object>
+							<!-- W4_PRESS_HPA: Pressure hPa -->
+							<sixx.object sixx.id="42" sixx.type="InputsOutputsAdaptorForUserBlock" sixx.env="Arduino" >
+								<sixx.object sixx.id="43" sixx.name="object" sixx.type="UniversalBlockInputOutput" sixx.env="Arduino" >
+									<sixx.object sixx.name="block" sixx.idref="7" />
+									<sixx.object sixx.name="type" sixx.idref="19" />
+									<sixx.object sixx.name="isInput" sixx.type="True" sixx.env="Core" />
+									<sixx.object sixx.id="44" sixx.name="name" sixx.type="String" sixx.env="Core" >W4_PRESS_HPA</sixx.object>
+									<sixx.object sixx.name="isNot" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="45" sixx.name="id" sixx.type="String" sixx.env="Core" >3cbb359a-697b-4f47-8010-61b9a8ccba47</sixx.object>
+								</sixx.object>
+								<sixx.object sixx.id="46" sixx.name="comment" sixx.type="String" sixx.env="Core" >Sensor pressure hPa (BME280)</sixx.object>
+								<sixx.object sixx.id="47" sixx.name="id" sixx.type="String" sixx.env="Core" >44eb11b4-d109-4537-8732-5f80ffc45f50</sixx.object>
+							</sixx.object>
+							<!-- W4_RAIN_LOCAL: Local rain sensor state -->
+							<sixx.object sixx.id="48" sixx.type="InputsOutputsAdaptorForUserBlock" sixx.env="Arduino" >
+								<sixx.object sixx.id="49" sixx.name="object" sixx.type="UniversalBlockInputOutput" sixx.env="Arduino" >
+									<sixx.object sixx.name="block" sixx.idref="7" />
+									<sixx.object sixx.name="type" sixx.idref="12" />
+									<sixx.object sixx.name="isInput" sixx.type="True" sixx.env="Core" />
+									<sixx.object sixx.id="50" sixx.name="name" sixx.type="String" sixx.env="Core" >W4_RAIN_LOCAL</sixx.object>
+									<sixx.object sixx.name="isNot" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="51" sixx.name="id" sixx.type="String" sixx.env="Core" >397b58f8-cd4d-4199-b105-206a42f09c5e</sixx.object>
+								</sixx.object>
+								<sixx.object sixx.id="52" sixx.name="comment" sixx.type="String" sixx.env="Core" >Local rain sensor state (active wet)</sixx.object>
+								<sixx.object sixx.id="53" sixx.name="id" sixx.type="String" sixx.env="Core" >d5421051-6845-42eb-826c-d844d2ca3ce2</sixx.object>
+							</sixx.object>
+						</sixx.object>
+						<sixx.object sixx.id="54" sixx.name="outputs" sixx.type="OrderedCollection" sixx.env="Core" >
+							<!-- OUT_RAIN_PROB: Precipitation probability -->
+							<sixx.object sixx.id="55" sixx.type="InputsOutputsAdaptorForUserBlock" sixx.env="Arduino" >
+								<sixx.object sixx.id="56" sixx.name="object" sixx.type="UniversalBlockInputOutput" sixx.env="Arduino" >
+									<sixx.object sixx.name="block" sixx.idref="7" />
+									<sixx.object sixx.id="57" sixx.name="type" sixx.type="FloatDataType" sixx.env="Arduino" ></sixx.object>
+									<sixx.object sixx.name="isInput" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="58" sixx.name="name" sixx.type="String" sixx.env="Core" >OUT_RAIN_PROB</sixx.object>
+									<sixx.object sixx.name="isNot" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="59" sixx.name="id" sixx.type="String" sixx.env="Core" >8f2d9a1c-c5d0-4f8b-9c1d-3a7b8c2e5f91</sixx.object>
+								</sixx.object>
+								<sixx.object sixx.id="60" sixx.name="comment" sixx.type="String" sixx.env="Core" >Open-Meteo precipitation probability %</sixx.object>
+								<sixx.object sixx.id="61" sixx.name="id" sixx.type="String" sixx.env="Core" >7c4a9d8e-2f1a-4b5c-8d2c-1a9e3b5f7d8c</sixx.object>
+							</sixx.object>
+							<!-- OUT_RAIN_LOCAL_DETECTED: Local rain detected -->
+							<sixx.object sixx.id="62" sixx.type="InputsOutputsAdaptorForUserBlock" sixx.env="Arduino" >
+								<sixx.object sixx.id="63" sixx.name="object" sixx.type="UniversalBlockInputOutput" sixx.env="Arduino" >
+									<sixx.object sixx.name="block" sixx.idref="7" />
+									<sixx.object sixx.id="64" sixx.name="type" sixx.type="BooleanDataType" sixx.env="Arduino" ></sixx.object>
+									<sixx.object sixx.name="isInput" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="65" sixx.name="name" sixx.type="String" sixx.env="Core" >OUT_RAIN_LOCAL_DETECTED</sixx.object>
+									<sixx.object sixx.name="isNot" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="66" sixx.name="id" sixx.type="String" sixx.env="Core" >5e3a9f2c-1b7d-4a8c-9f1e-6c2a8b3d5f7e</sixx.object>
+								</sixx.object>
+								<sixx.object sixx.id="67" sixx.name="comment" sixx.type="String" sixx.env="Core" >Local rain detected (sensor active)</sixx.object>
+								<sixx.object sixx.id="68" sixx.name="id" sixx.type="String" sixx.env="Core" >3d5f8a1c-7e2b-4c9d-1a3f-8c5b2d9e4a7f</sixx.object>
+							</sixx.object>
+							<!-- OUT_FORECAST_DECISION: Final forecast decision -->
+							<sixx.object sixx.id="69" sixx.type="InputsOutputsAdaptorForUserBlock" sixx.env="Arduino" >
+								<sixx.object sixx.id="70" sixx.name="object" sixx.type="UniversalBlockInputOutput" sixx.env="Arduino" >
+									<sixx.object sixx.name="block" sixx.idref="7" />
+									<sixx.object sixx.name="type" sixx.idref="64" />
+									<sixx.object sixx.name="isInput" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="71" sixx.name="name" sixx.type="String" sixx.env="Core" >OUT_FORECAST_DECISION</sixx.object>
+									<sixx.object sixx.name="isNot" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="72" sixx.name="id" sixx.type="String" sixx.env="Core" >9b4c7d3e-5a2f-4b8e-1c6d-3f9a2e7b5c8d</sixx.object>
+								</sixx.object>
+								<sixx.object sixx.id="73" sixx.name="comment" sixx.type="String" sixx.env="Core" >Final rain forecast decision (true=rain expected)</sixx.object>
+								<sixx.object sixx.id="74" sixx.name="id" sixx.type="String" sixx.env="Core" >2a5d8c1f-4b9e-3d7a-8c5f-1b2e9a4c6f3d</sixx.object>
+							</sixx.object>
+							<!-- OUT_TEMP_FORECAST: Forecast temperature -->
+							<sixx.object sixx.id="75" sixx.type="InputsOutputsAdaptorForUserBlock" sixx.env="Arduino" >
+								<sixx.object sixx.id="76" sixx.name="object" sixx.type="UniversalBlockInputOutput" sixx.env="Arduino" >
+									<sixx.object sixx.name="block" sixx.idref="7" />
+									<sixx.object sixx.name="type" sixx.idref="57" />
+									<sixx.object sixx.name="isInput" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="77" sixx.name="name" sixx.type="String" sixx.env="Core" >OUT_TEMP_FORECAST</sixx.object>
+									<sixx.object sixx.name="isNot" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="78" sixx.name="id" sixx.type="String" sixx.env="Core" >6c3e7a2f-1d9b-4f5c-8a1e-3b7d2c9f5a8e</sixx.object>
+								</sixx.object>
+								<sixx.object sixx.id="79" sixx.name="comment" sixx.type="String" sixx.env="Core" >Forecast temperature from Open-Meteo</sixx.object>
+								<sixx.object sixx.id="80" sixx.name="id" sixx.type="String" sixx.env="Core" >4f8b1d5c-7a2e-3c9f-1e6d-2a5c8b3f7d9a</sixx.object>
+							</sixx.object>
+							<!-- OUT_STATUS: Block execution status -->
+							<sixx.object sixx.id="81" sixx.type="InputsOutputsAdaptorForUserBlock" sixx.env="Arduino" >
+								<sixx.object sixx.id="82" sixx.name="object" sixx.type="UniversalBlockInputOutput" sixx.env="Arduino" >
+									<sixx.object sixx.name="block" sixx.idref="7" />
+									<sixx.object sixx.id="83" sixx.name="type" sixx.type="IntegerDataType" sixx.env="Arduino" ></sixx.object>
+									<sixx.object sixx.name="isInput" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="84" sixx.name="name" sixx.type="String" sixx.env="Core" >OUT_STATUS</sixx.object>
+									<sixx.object sixx.name="isNot" sixx.type="False" sixx.env="Core" />
+									<sixx.object sixx.id="85" sixx.name="id" sixx.type="String" sixx.env="Core" >7d2a9e5f-3c1b-4f8d-9a2e-1c7b5d8a3f6e</sixx.object>
+								</sixx.object>
+								<sixx.object sixx.id="86" sixx.name="comment" sixx.type="String" sixx.env="Core" >Status code: 0=OK, 1=API error, 2=Processing</sixx.object>
+								<sixx.object sixx.id="87" sixx.name="id" sixx.type="String" sixx.env="Core" >1e5c8d3a-9f2b-4a7d-3c6e-8b1f5d2c9a4e</sixx.object>
+							</sixx.object>
+						</sixx.object>
+					</sixx.object>
+					<sixx.object sixx.name="block" sixx.idref="7" />
+				</sixx.object>
+				<sixx.object sixx.id="88" sixx.name="comment" sixx.type="String" sixx.env="Core" >Enable block activation</sixx.object>
+				<sixx.object sixx.id="89" sixx.name="id" sixx.type="String" sixx.env="Core" >1f3e5c8a-2b7d-4a9c-8e1d-6f3a5b8c2e7d</sixx.object>
+			</sixx.object>
+		</sixx.object>
+	</sixx.object>
+</sixx.object>
