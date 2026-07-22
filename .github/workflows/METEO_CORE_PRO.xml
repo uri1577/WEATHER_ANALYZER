@@ -18,30 +18,23 @@ if (MCP_EN) {
     static unsigned long mcp_cycle_timer = 0;
     static int mcp_current_disp_hour = 1;
 
-    // Output probabilities array 1..6 hours
     static int mcp_p_final[7] = {0, 0, 0, 0, 0, 0, 0};
-    
-    // Status flag for Open-Meteo online fetch
     static bool mcp_om_success = false;
 
-    // Compact 200-record ring buffer memory
     struct MCP_Record {
-        int8_t temp_x2;      // Temp in C * 2 (-50..+80)
-        uint8_t hum;         // Humidity 0..100%
-        uint16_t press_hpa;  // Pressure 800..1100 hPa
-        int8_t dew_point_x2; // Dew point * 2
-        uint8_t day_of_year; // Scaled day of year (1..365 -> 0..255)
-        uint8_t rain_flag;   // 1 if rain detected, 0 if dry
-        uint8_t prob_out;    // Calculated prob
+        int8_t temp_x2;
+        uint8_t hum;
+        uint16_t press_hpa;
+        int8_t dew_point_x2;
+        uint8_t day_of_year;
+        uint8_t rain_flag;
+        uint8_t prob_out;
     };
     
     static MCP_Record mcp_db[200];
     static uint16_t mcp_db_head = 0;
     static uint16_t mcp_db_count = 0;
 
-    // ------------------------------------------------------------
-    // MODULE 1: DEW POINT & LOCAL SENSOR VALIDATION
-    // ------------------------------------------------------------
     bool temp_valid = (MCP_TEMP_C &gt;= -50.0f &amp;&amp; MCP_TEMP_C &lt;= 80.0f);
     bool hum_valid = (MCP_HUM_PCT &gt;= 0.0f &amp;&amp; MCP_HUM_PCT &lt;= 100.0f);
     bool press_valid = false;
@@ -57,9 +50,6 @@ if (MCP_EN) {
     float local_dew_point = MCP_TEMP_C - ((100.0f - MCP_HUM_PCT) / 5.0f);
     float dew_diff = MCP_TEMP_C - local_dew_point;
 
-    // ------------------------------------------------------------
-    // MODULE 2: TREND ANALYZER (10-min &amp; history deltas)
-    // ------------------------------------------------------------
     static float prev_press = 1013.25f;
     static float prev_hum = 50.0f;
     static float prev_temp = 20.0f;
@@ -68,31 +58,19 @@ if (MCP_EN) {
     float hum_delta = MCP_HUM_PCT - prev_hum;
     float temp_delta = MCP_TEMP_C - prev_temp;
 
-    // ------------------------------------------------------------
-    // MODULE 3: SEASONAL LEARNING &amp; DAY OF YEAR WEIGHT TRANSITION
-    // ------------------------------------------------------------
-    // Default day estimation fallback if no RTC
-    static uint16_t day_of_year = 180; // Summer default mid-year
+    static uint16_t day_of_year = 180;
     
-    // Calculate smooth seasonal bias
     float seasonal_bias = 0.0f;
     if (day_of_year &gt;= 60 &amp;&amp; day_of_year &lt; 152) {
-        // Spring -> Summer transition
         seasonal_bias = (press_delta &lt; -0.8f) ? 10.0f : 0.0f;
     } else if (day_of_year &gt;= 152 &amp;&amp; day_of_year &lt; 244) {
-        // Summer peak
         if (MCP_TEMP_C &gt; 25.0f &amp;&amp; MCP_HUM_PCT &gt; 70.0f) seasonal_bias = 15.0f;
     } else if (day_of_year &gt;= 244 &amp;&amp; day_of_year &lt; 335) {
-        // Autumn
         if (MCP_HUM_PCT &gt; 80.0f &amp;&amp; press_delta &lt; -0.5f) seasonal_bias = 20.0f;
     } else {
-        // Winter
         if (MCP_TEMP_C &lt;= 2.0f &amp;&amp; MCP_HUM_PCT &gt; 85.0f) seasonal_bias = 12.0f;
     }
 
-    // ------------------------------------------------------------
-    // MODULE 7: ONLINE ENGINE (Open-Meteo HTTP fetch)
-    // ------------------------------------------------------------
     int req_min = MCP_REQ_MIN;
     if (req_min &lt; 10) req_min = 10;
     if (req_min &gt; 360) req_min = 360;
@@ -152,12 +130,8 @@ if (MCP_EN) {
         }
     }
 
-    // ------------------------------------------------------------
-    // MODULE 8: LOCAL ENGINE (Offline model fallback)
-    // ------------------------------------------------------------
     float local_base_prob = 0.0f;
     if (temp_valid &amp;&amp; hum_valid &amp;&amp; press_valid) {
-        // Base probability calculated from local physics
         if (MCP_HUM_PCT &gt;= 90.0f) local_base_prob += 40.0f;
         else if (MCP_HUM_PCT &gt;= 80.0f) local_base_prob += 25.0f;
         else if (MCP_HUM_PCT &gt;= 70.0f) local_base_prob += 10.0f;
@@ -174,17 +148,14 @@ if (MCP_EN) {
         local_base_prob += seasonal_bias;
     }
 
-    // Combine Online + Local depending on mcp_om_success
     for (int h = 1; h &lt;= 6; h++) {
         if (!mcp_om_success) {
-            // Full Offline mode
             float hour_decay = 1.0f - ((h - 1) * 0.08f);
             float calc_p = local_base_prob * hour_decay;
             if (calc_p &lt; 0.0f) calc_p = 0.0f;
             if (calc_p &gt; 100.0f) calc_p = 100.0f;
             mcp_p_final[h] = (int)calc_p;
         } else {
-            // Hybrid mode: 60% Online + 40% Local correction
             float combined = (mcp_p_final[h] * 0.60f) + (local_base_prob * 0.40f);
             if (combined &lt; 0.0f) combined = 0.0f;
             if (combined &gt; 100.0f) combined = 100.0f;
@@ -192,18 +163,12 @@ if (MCP_EN) {
         }
     }
 
-    // ------------------------------------------------------------
-    // MODULE 6: RAIN LEARNING &amp; SENSOR VERIFICATION
-    // ------------------------------------------------------------
     if (MCP_RAIN_USE &amp;&amp; MCP_RAIN_STATE) {
         if (mcp_p_final[1] &lt; 90) mcp_p_final[1] = 90;
         if (mcp_p_final[2] &lt; 70) mcp_p_final[2] = 70;
     }
 
-    // ------------------------------------------------------------
-    // MODULE 4 &amp; 5: MEMORY MANAGER (Ring buffer write)
-    // ------------------------------------------------------------
-    if (millis() - mcp_last_tick &gt;= 600000UL || mcp_last_tick == 0) { // Every 10 mins
+    if (millis() - mcp_last_tick &gt;= 600000UL || mcp_last_tick == 0) {
         mcp_last_tick = millis();
 
         prev_press = norm_press;
@@ -224,10 +189,7 @@ if (MCP_EN) {
         }
     }
 
-    // ------------------------------------------------------------
-    // MODULE 9: FINAL DECISION &amp; DISPLAY OUTPUTS
-    // ------------------------------------------------------------
-    if (millis() - mcp_cycle_timer &gt;= 20000UL) { // Rotate screen hour every 20s
+    if (millis() - mcp_cycle_timer &gt;= 20000UL) {
         mcp_cycle_timer = millis();
         mcp_current_disp_hour++;
         if (mcp_current_disp_hour &gt; 6) mcp_current_disp_hour = 1;
@@ -245,7 +207,6 @@ if (MCP_EN) {
     MCP_HOUR_6 = 6; MCP_PROB_6 = mcp_p_final[6];
 
 } else {
-    // Block disabled
     MCP_OUT_HOUR = 1;
     MCP_OUT_PROB = 0;
     MCP_OM_STATUS = false;
