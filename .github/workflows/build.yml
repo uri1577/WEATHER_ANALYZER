@@ -1,0 +1,35 @@
+name: Build UBI Block
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Convert to UBI
+        run: |
+          python -c '
+          import glob
+          for file in glob.glob("*.xml"):
+              with open(file, "r", encoding="utf-8") as f:
+                  content = f.read()
+              out_name = file.replace(".xml", ".ubi")
+              with open(out_name, "wb") as f:
+                  f.write(content.encode("utf-16le_bom"))
+          '
+
+      - name: Upload UBI Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: compiled-ubi-file
+          path: "*.ubi"
