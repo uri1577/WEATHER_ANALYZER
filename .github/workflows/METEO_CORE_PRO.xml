@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="UTF-16"?>
+<sixx.object sixx.id="0" sixx.type="UserBlock" sixx.env="Core">
+	<name sixx.id="1">METEO_CORE_PRO</name>
+	<comment sixx.id="2">Self-learning weather analyzer block V4 with offline mode and 200-record ring memory. ASCII only version for stable FLProg import.</comment>
+	<vendor sixx.id="3">Custom</vendor>
+	<version sixx.id="4">4.0.0</version>
+	<declareCodePart sixx.id="5" sixx.type="OrderedCollection">
+	</declareCodePart>
+	<loopCodePart sixx.id="6" sixx.type="OrderedCollection">
+		<item sixx.id="7" sixx.type="String">
+// ============================================================
+// METEO_CORE_PRO - ADVANCED WEATHER FORECAST ENGINE V4.0
+// ============================================================
+
+if (MCP_EN) {
+    static unsigned long mcp_last_tick = 0;
+    static unsigned long mcp_last_req = 0;
+    static unsigned long mcp_cycle_timer = 0;
+    static int mcp_current_disp_hour = 1;
+
+    // Output probabilities array 1..6 hours
+    static int mcp_p_final[7] = {0, 0, 0, 0, 0, 0, 0};
+    
+    // Status flag for Open-Meteo online fetch
+    static bool mcp_om_success = false;
+
+    // Compact 200-record ring buffer memory
+    struct MCP_Record {
+        int8_t temp_x2;      // Temp in C * 2 (-50..+80)
+        uint8_t hum;         // Humidity 0..100%
+        uint16_t press_hpa;  // Pressure 800..1100 hPa
+        int8_t dew_point_x2; // Dew point * 2
+        uint8_t day_of_year; // Scaled day of year (1..365 -> 0..255)
+        uint8_t rain_flag;   // 1 if rain detected, 0 if dry
+        uint8_t prob_out;    // Calculated prob
+    };
+    
+    static MCP_Record mcp_db[200];
+    static uint16_t mcp_db_head = 0;
+    static uint16_t mcp_db_count = 0;
+
+    // ------------------------------------------------------------
+    // MODULE 1: DEW POINT & LOCAL SENSOR VALIDATION
+    // ------------------------------------------------------------
+    bool temp_valid = (MCP_TEMP_C &gt;= -50.0f &amp;&amp; MCP_TEMP_C &lt;= 80.0f);
+    bool hum_valid = (MCP_HUM_PCT &gt;= 0.0f &amp;&amp; MCP_HUM_PCT &lt;= 100.0f);
+    bool press_valid = false;
+    float norm_press = MCP_PRESS_HPA;
+
+    if (norm_press &gt; 80000.0f &amp;&amp; norm_press &lt; 110000.0f) {
+        norm_press /= 100.0f;
+    }
+    if (norm_press &gt;= 800.0f &amp;&amp; norm_press &lt;= 1100.0f) {
+        press_valid = true;
+    }
+
+    float local_dew_point = MCP_TEMP_C - ((100.0f - MCP_HUM_PCT) / 5.0f);
+    float dew_diff = MCP_TEMP_C - local_dew_point;
+
+    // ------------------------------------------------------------
+    // MODULE 2: TREND ANALYZER (10-min &amp; history deltas)
+    // ------------------------------------------------------------
+    static float prev_press = 1013.25f;
+    static float prev_hum = 50.0f;
+    static float prev_temp = 20.0f;
+
+    float press_delta = norm_press - prev_press;
+    float hum_delta = MCP_HUM_PCT - prev_hum;
+    float temp_delta = MCP_TEMP_C - prev_temp;
+
+    // ------------------------------------------------------------
+    // MODULE 3: SEASONAL LEARNING &amp; DAY OF YEAR WEIGHT TRANSITION
+    // ------------------------------------------------------------
+    // Default day estimation fallback if no RTC
+    static uint16_t day_of_year = 180; // Summer default mid-year
+    
+    // Calculate smooth seasonal bias
+    float seasonal_bias = 0.0f;
+    if (day_of_year &gt;= 60 &amp;&amp; day_of_year &lt; 152) {
+        // Spring -> Summer transition
+        seasonal_bias = (press_delta &lt; -0.8f) ? 10.0f : 0.0f;
+    } else if (day_of_year &gt;= 152 &amp;&amp; day_of_year &lt; 244) {
+        // Summer peak
+        if (MCP_TEMP_C &gt; 25.0f &amp;&amp; MCP_HUM_PCT &gt; 70.0f) seasonal_bias = 15.0f;
+    } else if (day_of_year &gt;= 244 &amp;&amp; day_of_year &lt; 335) {
+        // Autumn
+        if (MCP_HUM_PCT &gt; 80.0f &amp;&amp; press_delta &lt; -0.5f) seasonal_bias = 20.0f;
+    } else {
+        // Winter
+        if (MCP_TEMP_C &lt;= 2.0f &amp;&amp; MCP_HUM_PCT &gt; 85.0f) seasonal_bias = 12.0f;
+    }
+
+    // ------------------------------------------------------------
+    // MODULE 7: ONLINE ENGINE (Open-Meteo HTTP fetch)
+    // ------------------------------------------------------------
+    int req_min = MCP_REQ_MIN;
+    if (req_min &lt; 10) req_min = 10;
+    if (req_min &gt; 360) req_min = 360;
+
+    unsigned long req_interval_ms = (unsigned long)req_min * 60000UL;
+
+    if (millis() - mcp_last_req &gt;= req_interval_ms || mcp_last_req == 0) {
+        mcp_last_req = millis();
+        mcp_om_success = false;
+
+        if (WiFi.status() == WL_CONNECTED) {
+            WiFiClient client;
+            if (client.connect("api.open-meteo.com", 80)) {
+                String url = "/v1/forecast?latitude=" + String(MCP_LAT, 4) +
+                             "&amp;longitude=" + String(MCP_LON, 4) +
+                             "&amp;hourly=precipitation_probability,precipitation,rain,showers,snowfall,weather_code" +
+                             "&amp;forecast_hours=12&amp;timezone=auto";
+
+                client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+                             "Host: api.open-meteo.com\r\n" +
+                             "Connection: close\r\n\r\n");
+
+                unsigned long timeout = millis();
+                while (client.available() == 0) {
+                    if (millis() - timeout &gt; 2500) {
+                        client.stop();
+                        break;
+                    }
+                }
+
+                if (client.available()) {
+                    String response = client.readString();
+                    client.stop();
+
+                    int idx = response.indexOf("\"precipitation_probability\":[");
+                    if (idx != -1) {
+                        int start = idx + 29;
+                        int end = response.indexOf("]", start);
+                        if (end != -1) {
+                            String arrStr = response.substring(start, end);
+                            int h = 1;
+                            int curPos = 0;
+                            while (h &lt;= 6 &amp;&amp; curPos &lt; (int)arrStr.length()) {
+                                int nextComma = arrStr.indexOf(',', curPos);
+                                if (nextComma == -1) nextComma = arrStr.length();
+                                String valStr = arrStr.substring(curPos, nextComma);
+                                valStr.trim();
+                                mcp_p_final[h] = valStr.toInt();
+                                curPos = nextComma + 1;
+                                h++;
+                            }
+                            mcp_om_success = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------
+    // MODULE 8: LOCAL ENGINE (Offline model fallback)
+    // ------------------------------------------------------------
+    float local_base_prob = 0.0f;
+    if (temp_valid &amp;&amp; hum_valid &amp;&amp; press_valid) {
+        // Base probability calculated from local physics
+        if (MCP_HUM_PCT &gt;= 90.0f) local_base_prob += 40.0f;
+        else if (MCP_HUM_PCT &gt;= 80.0f) local_base_prob += 25.0f;
+        else if (MCP_HUM_PCT &gt;= 70.0f) local_base_prob += 10.0f;
+        else if (MCP_HUM_PCT &lt; 50.0f) local_base_prob -= 15.0f;
+
+        if (press_delta &lt;= -1.5f) local_base_prob += 35.0f;
+        else if (press_delta &lt;= -0.8f) local_base_prob += 20.0f;
+        else if (press_delta &lt;= -0.4f) local_base_prob += 10.0f;
+        else if (press_delta &gt;= 0.8f) local_base_prob -= 20.0f;
+
+        if (dew_diff &lt;= 1.0f) local_base_prob += 20.0f;
+        else if (dew_diff &lt;= 2.0f) local_base_prob += 10.0f;
+
+        local_base_prob += seasonal_bias;
+    }
+
+    // Combine Online + Local depending on mcp_om_success
+    for (int h = 1; h &lt;= 6; h++) {
+        if (!mcp_om_success) {
+            // Full Offline mode
+            float hour_decay = 1.0f - ((h - 1) * 0.08f);
+            float calc_p = local_base_prob * hour_decay;
+            if (calc_p &lt; 0.0f) calc_p = 0.0f;
+            if (calc_p &gt; 100.0f) calc_p = 100.0f;
+            mcp_p_final[h] = (int)calc_p;
+        } else {
+            // Hybrid mode: 60% Online + 40% Local correction
+            float combined = (mcp_p_final[h] * 0.60f) + (local_base_prob * 0.40f);
+            if (combined &lt; 0.0f) combined = 0.0f;
+            if (combined &gt; 100.0f) combined = 100.0f;
+            mcp_p_final[h] = (int)combined;
+        }
+    }
+
+    // ------------------------------------------------------------
+    // MODULE 6: RAIN LEARNING &amp; SENSOR VERIFICATION
+    // ------------------------------------------------------------
+    if (MCP_RAIN_USE &amp;&amp; MCP_RAIN_STATE) {
+        if (mcp_p_final[1] &lt; 90) mcp_p_final[1] = 90;
+        if (mcp_p_final[2] &lt; 70) mcp_p_final[2] = 70;
+    }
+
+    // ------------------------------------------------------------
+    // MODULE 4 &amp; 5: MEMORY MANAGER (Ring buffer write)
+    // ------------------------------------------------------------
+    if (millis() - mcp_last_tick &gt;= 600000UL || mcp_last_tick == 0) { // Every 10 mins
+        mcp_last_tick = millis();
+
+        prev_press = norm_press;
+        prev_hum = MCP_HUM_PCT;
+        prev_temp = MCP_TEMP_C;
+
+        if (temp_valid &amp;&amp; hum_valid &amp;&amp; press_valid) {
+            mcp_db[mcp_db_head].temp_x2 = (int8_t)(MCP_TEMP_C * 2.0f);
+            mcp_db[mcp_db_head].hum = (uint8_t)MCP_HUM_PCT;
+            mcp_db[mcp_db_head].press_hpa = (uint16_t)norm_press;
+            mcp_db[mcp_db_head].dew_point_x2 = (int8_t)(local_dew_point * 2.0f);
+            mcp_db[mcp_db_head].day_of_year = (uint8_t)((day_of_year * 255) / 365);
+            mcp_db[mcp_db_head].rain_flag = (MCP_RAIN_USE &amp;&amp; MCP_RAIN_STATE) ? 1 : 0;
+            mcp_db[mcp_db_head].prob_out = (uint8_t)mcp_p_final[1];
+
+            mcp_db_head = (mcp_db_head + 1) % 200;
+            if (mcp_db_count &lt; 200) mcp_db_count++;
+        }
+    }
+
+    // ------------------------------------------------------------
+    // MODULE 9: FINAL DECISION &amp; DISPLAY OUTPUTS
+    // ------------------------------------------------------------
+    if (millis() - mcp_cycle_timer &gt;= 20000UL) { // Rotate screen hour every 20s
+        mcp_cycle_timer = millis();
+        mcp_current_disp_hour++;
+        if (mcp_current_disp_hour &gt; 6) mcp_current_disp_hour = 1;
+    }
+
+    MCP_OUT_HOUR = mcp_current_disp_hour;
+    MCP_OUT_PROB = mcp_p_final[mcp_current_disp_hour];
+    MCP_OM_STATUS = mcp_om_success;
+
+    MCP_HOUR_1 = 1; MCP_PROB_1 = mcp_p_final[1];
+    MCP_HOUR_2 = 2; MCP_PROB_2 = mcp_p_final[2];
+    MCP_HOUR_3 = 3; MCP_PROB_3 = mcp_p_final[3];
+    MCP_HOUR_4 = 4; MCP_PROB_4 = mcp_p_final[4];
+    MCP_HOUR_5 = 5; MCP_PROB_5 = mcp_p_final[5];
+    MCP_HOUR_6 = 6; MCP_PROB_6 = mcp_p_final[6];
+
+} else {
+    // Block disabled
+    MCP_OUT_HOUR = 1;
+    MCP_OUT_PROB = 0;
+    MCP_OM_STATUS = false;
+
+    MCP_HOUR_1 = 1; MCP_PROB_1 = 0;
+    MCP_HOUR_2 = 2; MCP_PROB_2 = 0;
+    MCP_HOUR_3 = 3; MCP_PROB_3 = 0;
+    MCP_HOUR_4 = 4; MCP_PROB_4 = 0;
+    MCP_HOUR_5 = 5; MCP_PROB_5 = 0;
+    MCP_HOUR_6 = 6; MCP_PROB_6 = 0;
+}
+		</item>
+	</loopCodePart>
+
+	<inputs sixx.id="8" sixx.type="OrderedCollection">
+		<item sixx.id="9" sixx.type="UserBlockInput">
+			<name sixx.id="10">MCP_EN</name>
+			<type sixx.id="11">Bool</type>
+			<uuid sixx.id="12">c7a10001-4444-4000-8000-000000000001</uuid>
+		</item>
+		<item sixx.id="13" sixx.type="UserBlockInput">
+			<name sixx.id="14">MCP_LAT</name>
+			<type sixx.id="15">Float</type>
+			<uuid sixx.id="16">c7a10001-4444-4000-8000-000000000002</uuid>
+		</item>
+		<item sixx.id="17" sixx.type="UserBlockInput">
+			<name sixx.id="18">MCP_LON</name>
+			<type sixx.id="19">Float</type>
+			<uuid sixx.id="20">c7a10001-4444-4000-8000-000000000003</uuid>
+		</item>
+		<item sixx.id="21" sixx.type="UserBlockInput">
+			<name sixx.id="22">MCP_TEMP_C</name>
+			<type sixx.id="23">Float</type>
+			<uuid sixx.id="24">c7a10001-4444-4000-8000-000000000004</uuid>
+		</item>
+		<item sixx.id="25" sixx.type="UserBlockInput">
+			<name sixx.id="26">MCP_HUM_PCT</name>
+			<type sixx.id="27">Float</type>
+			<uuid sixx.id="28">c7a10001-4444-4000-8000-000000000005</uuid>
+		</item>
+		<item sixx.id="29" sixx.type="UserBlockInput">
+			<name sixx.id="30">MCP_PRESS_HPA</name>
+			<type sixx.id="31">Float</type>
+			<uuid sixx.id="32">c7a10001-4444-4000-8000-000000000006</uuid>
+		</item>
+		<item sixx.id="33" sixx.type="UserBlockInput">
+			<name sixx.id="34">MCP_RAIN_USE</name>
+			<type sixx.id="35">Bool</type>
+			<uuid sixx.id="36">c7a10001-4444-4000-8000-000000000007</uuid>
+		</item>
+		<item sixx.id="37" sixx.type="UserBlockInput">
+			<name sixx.id="38">MCP_RAIN_STATE</name>
+			<type sixx.id="39">Bool</type>
+			<uuid sixx.id="40">c7a10001-4444-4000-8000-000000000008</uuid>
+		</item>
+	</inputs>
+
+	<outputs sixx.id="41" sixx.type="OrderedCollection">
+		<item sixx.id="42" sixx.type="UserBlockOutput">
+			<name sixx.id="43">MCP_OUT_HOUR</name>
+			<type sixx.id="44">Int</type>
+			<uuid sixx.id="45">c7a10002-4444-4000-8000-000000000001</uuid>
+		</item>
+		<item sixx.id="46" sixx.type="UserBlockOutput">
+			<name sixx.id="47">MCP_OUT_PROB</name>
+			<type sixx.id="48">Int</type>
+			<uuid sixx.id="49">c7a10002-4444-4000-8000-000000000002</uuid>
+		</item>
+		<item sixx.id="50" sixx.type="UserBlockOutput">
+			<name sixx.id="51">MCP_OM_STATUS</name>
+			<type sixx.id="52">Bool</type>
+			<uuid sixx.id="53">c7a10002-4444-4000-8000-000000000003</uuid>
+		</item>
+
+		<item sixx.id="54" sixx.type="UserBlockOutput">
+			<name sixx.id="55">MCP_HOUR_1</name>
+			<type sixx.id="56">Int</type>
+			<uuid sixx.id="57">c7a10002-4444-4000-8000-000000000004</uuid>
+		</item>
+		<item sixx.id="58" sixx.type="UserBlockOutput">
+			<name sixx.id="59">MCP_PROB_1</name>
+			<type sixx.id="60">Int</type>
+			<uuid sixx.id="61">c7a10002-4444-4000-8000-000000000005</uuid>
+		</item>
+
+		<item sixx.id="62" sixx.type="UserBlockOutput">
+			<name sixx.id="63">MCP_HOUR_2</name>
+			<type sixx.id="64">Int</type>
+			<uuid sixx.id="65">c7a10002-4444-4000-8000-000000000006</uuid>
+		</item>
+		<item sixx.id="66" sixx.type="UserBlockOutput">
+			<name sixx.id="67">MCP_PROB_2</name>
+			<type sixx.id="68">Int</type>
+			<uuid sixx.id="69">c7a10002-4444-4000-8000-000000000007</uuid>
+		</item>
+
+		<item sixx.id="70" sixx.type="UserBlockOutput">
+			<name sixx.id="71">MCP_HOUR_3</name>
+			<type sixx.id="72">Int</type>
+			<uuid sixx.id="73">c7a10002-4444-4000-8000-000000000008</uuid>
+		</item>
+		<item sixx.id="74" sixx.type="UserBlockOutput">
+			<name sixx.id="75">MCP_PROB_3</name>
+			<type sixx.id="76">Int</type>
+			<uuid sixx.id="77">c7a10002-4444-4000-8000-000000000009</uuid>
+		</item>
+
+		<item sixx.id="78" sixx.type="UserBlockOutput">
+			<name sixx.id="79">MCP_HOUR_4</name>
+			<type sixx.id="80">Int</type>
+			<uuid sixx.id="81">c7a10002-4444-4000-8000-000000000010</uuid>
+		</item>
+		<item sixx.id="82" sixx.type="UserBlockOutput">
+			<name sixx.id="83">MCP_PROB_4</name>
+			<type sixx.id="84">Int</type>
+			<uuid sixx.id="85">c7a10002-4444-4000-8000-000000000011</uuid>
+		</item>
+
+		<item sixx.id="86" sixx.type="UserBlockOutput">
+			<name sixx.id="87">MCP_HOUR_5</name>
+			<type sixx.id="88">Int</type>
+			<uuid sixx.id="89">c7a10002-4444-4000-8000-000000000012</uuid>
+		</item>
+		<item sixx.id="90" sixx.type="UserBlockOutput">
+			<name sixx.id="91">MCP_PROB_5</name>
+			<type sixx.id="92">Int</type>
+			<uuid sixx.id="93">c7a10002-4444-4000-8000-000000000013</uuid>
+		</item>
+
+		<item sixx.id="94" sixx.type="UserBlockOutput">
+			<name sixx.id="95">MCP_HOUR_6</name>
+			<type sixx.id="96">Int</type>
+			<uuid sixx.id="97">c7a10002-4444-4000-8000-000000000014</uuid>
+		</item>
+		<item sixx.id="98" sixx.type="UserBlockOutput">
+			<name sixx.id="99">MCP_PROB_6</name>
+			<type sixx.id="100">Int</type>
+			<uuid sixx.id="101">c7a10002-4444-4000-8000-000000000015</uuid>
+		</item>
+	</outputs>
+
+	<parameters sixx.id="102" sixx.type="OrderedCollection">
+		<item sixx.id="103" sixx.type="UserBlockParameter">
+			<name sixx.id="104">MCP_REQ_MIN</name>
+			<type sixx.id="105">Int</type>
+			<value sixx.id="106">60</value>
+			<description sixx.id="107">Open-Meteo request interval in minutes (10..360)</description>
+			<uuid sixx.id="108">c7a10003-4444-4000-8000-000000000001</uuid>
+		</item>
+	</parameters>
+</sixx.object>
