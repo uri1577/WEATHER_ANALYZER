@@ -9,27 +9,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Convert to UBI
+      - name: Convert XML to UBI
         run: |
           python -c '
-          import glob
-          for file in glob.glob("*.xml"):
+          import os, glob
+          xml_files = glob.glob("*.xml")
+          if not xml_files:
+              print("No XML files found!")
+              exit(1)
+          for file in xml_files:
+              out_name = os.path.splitext(file)[0] + ".ubi"
               with open(file, "r", encoding="utf-8") as f:
                   content = f.read()
-              out_name = file.replace(".xml", ".ubi")
               with open(out_name, "wb") as f:
                   f.write(content.encode("utf-16le_bom"))
+              print(f"Successfully converted {file} -> {out_name}")
           '
 
       - name: Upload UBI Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: compiled-ubi-file
+          name: compiled-ubi-files
           path: "*.ubi"
